@@ -1,5 +1,0 @@
-cd Documents/Study/MA3/Machine Learning/ML_course
-git pull
-cd
-source activate ml
-jupyter notebook
