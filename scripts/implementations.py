@@ -15,3 +15,21 @@ def sgd_step(target, features, weights, gamma):
 	error = features.dot(weights)-target
 	new_weights = weights - gamma * error * features
 	return new_weights
+
+def ridge_regression(y, tx, lambda_):
+    """Returns only weights"""
+    shape = np.shape(np.dot(tx.T,tx))
+    a = np.dot(tx.T,tx) + lambda_*(2.0*len(y)) * np.identity(shape[0])
+    b = np.dot(tx.T,y)
+    return np.linalg.solve(a,b)
+
+def least_squares(y, tx):
+    a = np.dot(tx.T,tx)
+    b = np.dot(tx.T,y)
+    return np.linalg.solve(a,b)
+
+def compute_mse(y, tx, w):
+    """compute the loss by mse."""
+    e = y - tx.dot(w)
+    mse = e.dot(e) / (2 * len(e))
+    return mse
