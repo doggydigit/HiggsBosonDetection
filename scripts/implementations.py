@@ -143,3 +143,46 @@ def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
     w = w - gamma*np.linalg.inv(hessian).dot(gradient)
     return loss, w
 
+def standardize(x):
+    """Standardize the original data set."""
+    mean_x = np.mean(x)
+    x = x - mean_x
+    std_x = np.std(x)
+    x = x / std_x
+    return x, mean_x, std_x
+
+def gradient_descent(y, tx, initial_w, max_iters, gamma):
+    """Gradient descent algorithm."""
+    # Define parameters to store w and loss
+    ws = [initial_w]
+    losses = []
+    w = initial_w
+    for n_iter in range(max_iters):
+        loss = compute_loss(y, tx, w)
+        w = w - gamma*compute_gradient(y, tx, w)
+        ws.append(w)
+        losses.append(loss)
+        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
+              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+
+    return losses, ws
+
+def compute_stoch_gradient(y, tx, w):
+    """Compute a stochastic gradient from just few examples n and their corresponding y_n labels."""
+    return compute_gradient(y, tx, w)
+
+def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma):
+    """Stochastic gradient descent algorithm."""
+    ws = [initial_w]
+    losses = []
+    w = initial_w
+    for n_iter in range(max_iters):
+        loss = compute_loss(y, tx, w)
+        n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0])
+        w = w - gamma*compute_stoch_gradient(y[n], tx[n], w)
+        ws.append(w)
+        losses.append(loss)
+        print("Stochastic gradient descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
+              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+
+    return losses, ws
