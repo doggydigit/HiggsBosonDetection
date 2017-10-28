@@ -5,23 +5,23 @@ from proj1_helpers import *
 '''
 Required implementations:
 
-least squares GD(y, tx, initial w,
+least_squares_GD(y, tx, initial w,
 max iters, gamma)
 Linear regression using gradient descent
 
-least squares SGD(y, tx, initial w,
+least_squares_SGD(y, tx, initial w,
 max iters, gamma)
 Linear regression using stochastic gradient descent
 
-least squares(y, tx) Least squares regression using normal equations
+least_squares(y, tx) Least squares regression using normal equations
 
-ridge regression(y, tx, lambda ) Ridge regression using normal equations
+ridge_regression(y, tx, lambda ) Ridge regression using normal equations
 
-logistic regression(y, tx, initial w,
+logistic_regression(y, tx, initial w,
 max iters, gamma)
 Logistic regression using gradient descent or SGD
 
-reg logistic regression(y, tx, lambda ,
+reg_logistic_regression(y, tx, lambda ,
 initial w, max iters, gamma)
 Regularized logistic regression using gradient descent
 or SGD
