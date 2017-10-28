@@ -246,8 +246,11 @@ def learning_by_gradient_descent(y, tx, w, gamma, lambda_ = 0):
          
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     weights = initial_w
+    batch_size = 1
     for i in range(max_iters):
-         weigths = weights - gamma * calculate_gradient(y, tx, weights, lambda_)
+        n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
+        weigths = weights - gamma * calculate_gradient(y[n], tx[n], weights, lambda_)
+        #print("Weights = " + str(weights))
     loss = calculate_loss(y, tx, weights)
     return weights, loss
          
