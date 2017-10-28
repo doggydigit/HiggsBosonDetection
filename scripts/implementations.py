@@ -71,11 +71,14 @@ def standardize(x):
     x = x / std_x
     return x, mean_x, std_x
 
-def accuracy(weights, features, targets, nr_traindata):
-    train_predictions = predict_labels(weights, features)
+def accuracy(weights, features, targets, nr_traindata, model_type):
+    if(model_type == "linear"):        
+        train_predictions = predict_labels(weights, features)
+    elif(model_type == "logistic"):
+         train_predictions = predict_labels_lg(weights, features)
     return 1-(nr_traindata-train_predictions.dot(targets))/(2*nr_traindata)
 
-def cross_validation(y, x, k_indices, k, lambda_, degree):
+def cross_validation(y, x, k_indices, k, lambda_, degree, model_type, max_iters = 1000, gamma = 0.01):
     """return the loss of ridge regression."""
     loss_tr_arr = np.zeros(k)
     loss_te_arr = np.zeros(k)
@@ -92,12 +95,16 @@ def cross_validation(y, x, k_indices, k, lambda_, degree):
         x_test = build_poly(x_test, degree)
         x_test, _, _ = standardize(x_test)
         
-        weights = ridge_regression(y_train, x_train, lambda_)
+        initial_w = np.random.random(x_train.shape[1])
         
+        if(model_type == "linear"):
+            weights = ridge_regression(y_train, x_train, lambda_)
+        elif(model_type == "logistic"):
+             weights, _ = reg_logistic_regression(y_train, x_train, lambda_, initial_w, max_iters, gamma)
         #loss_tr_arr[i] = np.sqrt(2 * compute_mse(y_train, x_train, weights))
-        loss_tr_arr[i] = accuracy(weights, x_train, y_train, x_train.shape[0])
+        loss_tr_arr[i] = accuracy(weights, x_train, y_train, x_train.shape[0], model_type)
        # loss_te_arr[i] = np.sqrt(2 * compute_mse(y_test, x_test, weights))
-        loss_te_arr[i] = accuracy(weights, x_test, y_test, x_test.shape[0])
+        loss_te_arr[i] = accuracy(weights, x_test, y_test, x_test.shape[0], model_type)
         
     loss_tr = np.mean(loss_tr_arr)
     loss_te = np.mean(loss_te_arr)
@@ -223,20 +230,27 @@ def calculate_loss(y, tx, w):
     """compute the cost by negative log likelihood."""
     return np.sum(np.log(1 + np.exp(tx.dot(w))) - y * tx.dot(w))
 
-def calculate_gradient(y, tx, w):
+def calculate_gradient(y, tx, w, lambda_ = 0):
     """compute the gradient of loss."""
-    return tx.T.dot((sigmoid(tx.dot(w)) - y))
+    return tx.T.dot((sigmoid(tx.dot(w)) - y)) + lambda_ * np.abs(w)
 
-def learning_by_gradient_descent(y, tx, w, gamma):
+def learning_by_gradient_descent(y, tx, w, gamma, lambda_ = 0):
     """
     Do one step of gradient descen using logistic regression.
     Return the loss and the updated w.
     """
     loss = calculate_loss(y, tx, w)
-    grad = calculate_gradient(y, tx, w)
+    grad = calculate_gradient(y, tx, w, lambda_ = 0)
     w = w - gamma*grad
     return loss, w
-
+         
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+    weights = initial_w
+    for i in range(max_iters):
+         weigths = weights - gamma * calculate_gradient(y, tx, weights, lambda_)
+    loss = calculate_loss(y, tx, weights)
+    return weights, loss
+         
 def calculate_hessian(y, tx, w):
     """return the hessian of the loss function."""
     temp = tx.dot(w)
@@ -244,7 +258,7 @@ def calculate_hessian(y, tx, w):
     H = tx.T.dot(S).dot(tx)
     return H
 
-def logistic_regression(y, tx, w):
+def logistic_regression_newton(y, tx, w):
     """return the loss, gradient, and hessian."""
     loss = calculate_loss(y, tx, w)
     gradient = calculate_gradient(y, tx, w)
@@ -256,13 +270,13 @@ def learning_by_newton_method(y, tx, w):
     Do one step on Newton's method.
     return the loss and updated w.
     """
-    loss, gradient, hessian = logistic_regression(y, tx, w)
+    loss, gradient, hessian = logistic_regression_newton(y, tx, w)
     w = w - np.linalg.inv(hessian).dot(gradient)
     return loss, w
 
 def penalized_logistic_regression(y, tx, w, lambda_):
     """return the loss, gradient, and hessian."""
-    loss, gradient, hessian = logistic_regression(y, tx, w)
+    loss, gradient, hessian = logistic_regression_newton(y, tx, w)
     reg = (lambda_/2) * w.T.dot(w)
     return loss+reg, gradient, hessian
 
