@@ -182,7 +182,7 @@ def compute_loss(y, tx, w):
 def compute_gradient(y, tx, w, lambda_ = 0):
     """Compute the gradient."""
     error = y - tx.dot(w)
-    return (-1/y.shape[0]) * (tx.T @ error.T) + 2*lambda_*w
+    return (-1/y.shape[0]) * np.dot(tx.T, error.T) + 2*lambda_*w
 
 def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
     """Gradient descent algorithm."""
