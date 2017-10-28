@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from proj1_helpers import *
 
 
 def second_order_features(data, nr_columns, nr_data):
@@ -23,6 +25,7 @@ def second_order_features(data, nr_columns, nr_data):
     return features
 
 
+# Additional funtions to manipulate the data
 def white_cubic_features(data, nr_columns, nr_data):
     nr_features=3*nr_columns + 1
     features = np.zeros([nr_data, nr_features])
@@ -33,6 +36,108 @@ def white_cubic_features(data, nr_columns, nr_data):
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
     return features
 
+def build_poly(x, degree):
+    """polynomial basis functions for input data x, for j=0 up to j=degree."""
+    a = np.ones(x.shape)
+    for deg in np.arange(1, degree+1):
+        b = np.power(x, deg)
+        b[b == (-999)**deg] = -999
+        a = np.c_[a, b]       
+    return a
+
+def build_k_indices(y, k_fold, seed):
+    """build k indices for k-fold."""
+    num_row = y.shape[0]
+    interval = int(num_row / k_fold)
+    np.random.seed(seed)
+    indices = np.random.permutation(num_row)
+    k_indices = [indices[k * interval: (k + 1) * interval]
+                 for k in range(k_fold)]
+    return np.array(k_indices)
+
+def split_data(x, y, ratio, seed=1):
+    """split the dataset based on the split ratio."""
+    # set seed
+    np.random.seed(seed)
+    indicies = np.random.permutation(x.shape[0])
+    index_number = int(ratio*x.shape[0])
+    return (x[indicies[:index_number], ], x[indicies[index_number:] ,], y[indicies[:index_number], ], y[indicies[index_number:] ,])
+
+def standardize(x):
+    """Standardize the original data set."""
+    mean_x = np.mean(x)
+    x = x - mean_x
+    std_x = np.std(x)
+    x = x / std_x
+    return x, mean_x, std_x
+
+def accuracy(weights, features, targets, nr_traindata):
+    train_predictions = predict_labels(weights, features)
+    return 1-(nr_traindata-train_predictions.dot(targets))/(2*nr_traindata)
+
+def cross_validation(y, x, k_indices, k, lambda_, degree):
+    """return the loss of ridge regression."""
+    loss_tr_arr = np.zeros(k)
+    loss_te_arr = np.zeros(k)
+    for i in range(k):
+        mask = np.zeros(y.shape[0], dtype=bool)
+        mask[k_indices[i]] = True
+        x_train = x[~mask]
+        y_train = y[~mask]
+        x_test = x[mask]
+        y_test = y[mask]
+
+        x_train = build_poly(x_train, degree)
+        x_train, _, _ = standardize(x_train)
+        x_test = build_poly(x_test, degree)
+        x_test, _, _ = standardize(x_test)
+        
+        weights = ridge_regression(y_train, x_train, lambda_)
+        
+        #loss_tr_arr[i] = np.sqrt(2 * compute_mse(y_train, x_train, weights))
+        loss_tr_arr[i] = accuracy(weights, x_train, y_train, x_train.shape[0])
+       # loss_te_arr[i] = np.sqrt(2 * compute_mse(y_test, x_test, weights))
+        loss_te_arr[i] = accuracy(weights, x_test, y_test, x_test.shape[0])
+        
+    loss_tr = np.mean(loss_tr_arr)
+    loss_te = np.mean(loss_te_arr)
+    return loss_tr, loss_te
+
+def cross_validation_visualization(lambds, mse_tr, mse_te):
+    """visualization the curves of mse_tr and mse_te."""
+    plt.semilogx(lambds, mse_tr, marker=".", color='b', label='train error')
+    plt.semilogx(lambds, mse_te, marker=".", color='r', label='test error')
+    plt.xlabel("lambda")
+    plt.ylabel("accuracy")
+    plt.title("cross validation")
+    plt.legend(loc=2)
+    plt.grid(True)
+    plt.savefig("cross_validation")
+    plt.show()
+
+def plot_corr_matrix(corr_matrix, labels):
+    fig_cor, axes_cor = plt.subplots(1,1)
+    fig_cor.set_size_inches(12, 12)
+
+    myimage = axes_cor.imshow(corr_matrix, cmap='seismic', interpolation='nearest', vmax=1, vmin = -1)
+
+    plt.colorbar(myimage)
+
+    axes_cor.set_xticks(np.arange(0,corr_matrix.shape[0], corr_matrix.shape[0]*1.0/len(labels)))
+    axes_cor.set_yticks(np.arange(0,corr_matrix.shape[1], corr_matrix.shape[1]*1.0/len(labels)))
+
+    axes_cor.set_xticklabels(labels)
+    axes_cor.set_yticklabels(labels)
+    plt.xticks(rotation=90)
+
+    plt.draw()
+    
+def insert_mean_for_nan(data):
+    for i in range(data.shape[1]):
+        data[data[:, i] == -999, i] = np.nan
+        data[np.isnan(data[:, i]), i] = np.nanmean(data[:, i])
+    
+# Functions for linear regression task
 
 def sgd_step(target, features, weights, gamma):
     """One step of weight update for stochastic gradient descent"""
@@ -60,3 +165,112 @@ def compute_mse(y, tx, w):
     e = y - tx.dot(w)
     mse = e.dot(e) / (2 * len(e))
     return mse
+
+def compute_loss(y, tx, w):
+    """compute the loss by mse."""
+    e = y - tx.dot(w)
+    mse = e.dot(e) / (2 * len(e))
+    return mse
+
+def compute_gradient(y, tx, w, lambda_ = 0):
+    """Compute the gradient."""
+    error = y - tx.dot(w)
+    return (-1/y.shape[0]) * (tx.T @ error.T) + 2*lambda_*w
+
+def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
+    """Gradient descent algorithm."""
+    # Define parameters to store w and loss
+    ws = [initial_w]
+    losses = []
+    w = initial_w
+    for n_iter in range(max_iters):
+        loss = compute_loss(y, tx, w)
+        w = w - gamma*compute_gradient(y, tx, w, lambda_)
+        ws.append(w)
+        losses.append(loss)
+        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
+              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+
+    return losses, ws
+
+def compute_stoch_gradient(y, tx, w, lambda_):
+    """Compute a stochastic gradient from just few examples n and their corresponding y_n labels."""
+    return compute_gradient(y, tx, w, lambda_)
+
+def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, lambda_ = 0):
+    """Stochastic gradient descent algorithm for linear regression."""
+    ws = [initial_w]
+    losses = []
+    w = initial_w
+    for n_iter in range(max_iters):              
+        n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
+        w = w - gamma*compute_stoch_gradient(y[n], tx[n], w, lambda_)
+        ws.append(w)
+        loss = compute_loss(y, tx, w)
+        losses.append(loss)
+        print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
+              bi=n_iter, ti=max_iters - 1, l=loss, w = w.dot(w), g = gamma))
+
+    return losses, ws
+
+# Functions for logistic regression
+
+def sigmoid(t):
+    """apply sigmoid function on t."""
+    return np.exp(t)/(1 + np.exp(t))
+
+def calculate_loss(y, tx, w):
+    """compute the cost by negative log likelihood."""
+    return np.sum(np.log(1 + np.exp(tx.dot(w))) - y * tx.dot(w))
+
+def calculate_gradient(y, tx, w):
+    """compute the gradient of loss."""
+    return tx.T.dot((sigmoid(tx.dot(w)) - y))
+
+def learning_by_gradient_descent(y, tx, w, gamma):
+    """
+    Do one step of gradient descen using logistic regression.
+    Return the loss and the updated w.
+    """
+    loss = calculate_loss(y, tx, w)
+    grad = calculate_gradient(y, tx, w)
+    w = w - gamma*grad
+    return loss, w
+
+def calculate_hessian(y, tx, w):
+    """return the hessian of the loss function."""
+    temp = tx.dot(w)
+    S = np.identity(len(tx)) * sigmoid(temp) * (1 - sigmoid(temp))
+    H = tx.T.dot(S).dot(tx)
+    return H
+
+def logistic_regression(y, tx, w):
+    """return the loss, gradient, and hessian."""
+    loss = calculate_loss(y, tx, w)
+    gradient = calculate_gradient(y, tx, w)
+    hessian = calculate_hessian(y, tx, w)
+    return loss, gradient, hessian
+
+def learning_by_newton_method(y, tx, w):
+    """
+    Do one step on Newton's method.
+    return the loss and updated w.
+    """
+    loss, gradient, hessian = logistic_regression(y, tx, w)
+    w = w - np.linalg.inv(hessian).dot(gradient)
+    return loss, w
+
+def penalized_logistic_regression(y, tx, w, lambda_):
+    """return the loss, gradient, and hessian."""
+    loss, gradient, hessian = logistic_regression(y, tx, w)
+    reg = (lambda_/2) * w.T.dot(w)
+    return loss+reg, gradient, hessian
+
+def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
+    """
+    Do one step of gradient descent, using the penalized logistic regression.
+    Return the loss and updated w.
+    """
+    loss, gradient, hessian = penalized_logistic_regression(y, tx, w, lambda_)
+    w = w - gamma*np.linalg.inv(hessian).dot(gradient)
+    return loss, w
