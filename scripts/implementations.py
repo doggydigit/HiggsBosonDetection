@@ -13,15 +13,15 @@ least_squares_SGD(y, tx, initial w,
 max iters, gamma)
 Linear regression using stochastic gradient descent
 
-least_squares(y, tx) Least squares regression using normal equations
+DONE: least_squares(y, tx) Least squares regression using normal equations
 
-ridge_regression(y, tx, lambda ) Ridge regression using normal equations
+DONE: ridge_regression(y, tx, lambda ) Ridge regression using normal equations
 
-logistic_regression(y, tx, initial w,
+DONE: logistic_regression(y, tx, initial w,
 max iters, gamma)
 Logistic regression using gradient descent or SGD
 
-reg_logistic_regression(y, tx, lambda ,
+DONE: reg_logistic_regression(y, tx, lambda ,
 initial w, max iters, gamma)
 Regularized logistic regression using gradient descent
 or SGD
@@ -179,17 +179,20 @@ def sgd_step(target, features, weights, gamma):
 
 
 def ridge_regression(y, tx, lambda_):
-    """Returns only weights"""
     shape = np.shape(np.dot(tx.T, tx))
     a = np.dot(tx.T, tx) + lambda_*(2.0*len(y)) * np.identity(shape[0])
     b = np.dot(tx.T, y)
-    return np.linalg.solve(a, b)
+    weights = np.linalg.solve(a, b)
+    loss = compute_mse(y,tx,weights)
+    return weigths,loss
 
 
 def least_squares(y, tx):
     a = np.dot(tx.T, tx)
     b = np.dot(tx.T, y)
-    return np.linalg.solve(a, b)
+    weights = np.linalg.solve(a, b)
+    loss = compute_mse(y,tx,weights)
+    return weights,loss
 
 
 def compute_mse(y, tx, w):
