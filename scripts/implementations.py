@@ -28,6 +28,48 @@ or SGD
 '''
 
 
+def replace999mass(data):
+    doit = True
+    return doit
+
+
+def split_data_by_jet_num(data):
+    jet_num_index = 22
+    mask0 = [4, 5, 6, 12, 23, 24, 25, 26, 27, 28]
+    mask1 = [4, 5, 6, 12, 26, 27, 28]
+    nr_columns = len(data[0])
+    jetmask0 = np.ones(nr_columns, dtype=bool)
+    jetmask1 = np.ones(nr_columns, dtype=bool)
+    jetmask2 = np.ones(nr_columns, dtype=bool)
+    jetmask3 = np.ones(nr_columns, dtype=bool)
+    jetmask0[mask0] = False
+    jetmask1[mask1] = False
+    splitdata0 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0]), :]
+    splitdata0 = splitdata0[:, np.ndarray.tolist(np.where(jetmask0)[0])]
+    splitdata1 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0]), :]
+    splitdata1 = splitdata1[:, np.ndarray.tolist(np.where(jetmask1)[0])]
+    splitdata2 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0]), :]
+    splitdata2 = splitdata2[:, np.ndarray.tolist(np.where(jetmask2)[0])]
+    splitdata3 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0]), :]
+    splitdata3 = splitdata3[:, np.ndarray.tolist(np.where(jetmask3)[0])]
+
+    return splitdata0, splitdata1, splitdata2, splitdata3
+
+
+def add_sin_cos(data, nr_columns, nr_data):
+    radian_indexes = [15, 18, 20, 25, 28]
+    newdata = np.zeros(nr_data, nr_columns + 2*len(radian_indexes))
+    newdata[:, :nr_columns] = data
+    n = 0
+    for f in radian_indexes:
+        newdata[:, nr_columns+n] = np.sin(data[:, f])
+        n += 1
+        newdata[:, nr_columns + n] = np.cos(data[:, f])
+        n += 1
+    return newdata
+
+
+
 def second_order_features(data, nr_columns, nr_data):
     nr_features= nr_columns**2 + nr_columns + 1
     features = np.zeros([nr_data, nr_features])
