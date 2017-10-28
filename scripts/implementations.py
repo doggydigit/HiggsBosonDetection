@@ -278,6 +278,9 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         #print("Weights = " + str(weights))
     loss = calculate_loss(y, tx, weights)
     return weights, loss
+
+def logistic_regression(y, tx, initial_w, max_iters, gamma):
+    return reg_logistic_regression(y, tx, 0, initial_w, max_iters, gamma)
          
 def calculate_hessian(y, tx, w):
     """return the hessian of the loss function."""
