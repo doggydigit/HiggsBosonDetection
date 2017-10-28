@@ -63,7 +63,7 @@ def white_cubic_features(data, nr_columns, nr_data):
 
 def build_poly(x, degree):
     """polynomial basis functions for input data x, for j=0 up to j=degree."""
-    a = np.ones(x.shape)
+    a = np.ones(x.shape[0])
     for deg in np.arange(1, degree+1):
         b = np.power(x, deg)
         b[b == (-999)**deg] = -999
