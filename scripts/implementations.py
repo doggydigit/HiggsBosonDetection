@@ -2,6 +2,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 from proj1_helpers import *
 
+'''
+Required implementations:
+
+least squares GD(y, tx, initial w,
+max iters, gamma)
+Linear regression using gradient descent
+
+least squares SGD(y, tx, initial w,
+max iters, gamma)
+Linear regression using stochastic gradient descent
+
+least squares(y, tx) Least squares regression using normal equations
+
+ridge regression(y, tx, lambda ) Ridge regression using normal equations
+
+logistic regression(y, tx, initial w,
+max iters, gamma)
+Logistic regression using gradient descent or SGD
+
+reg logistic regression(y, tx, lambda ,
+initial w, max iters, gamma)
+Regularized logistic regression using gradient descent
+or SGD
+'''
+
 
 def second_order_features(data, nr_columns, nr_data):
     nr_features= nr_columns**2 + nr_columns + 1
