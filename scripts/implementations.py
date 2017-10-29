@@ -138,26 +138,28 @@ def split_data(x, y, ratio, seed=1):
     index_number = int(ratio*x.shape[0])
     return (x[indicies[:index_number], ], x[indicies[index_number:] ,], y[indicies[:index_number], ], y[indicies[index_number:] ,])
 
-def standardize(x):
+def standardize(x, mean_x=None, std_x=None):
     """Standardize the original data set."""
-    mean_x = np.mean(x)
+    if mean_x is None:
+        mean_x = np.mean(x, axis=0)
     x = x - mean_x
-    std_x = np.std(x)
-    x = x / std_x
-    return x, mean_x, std_x
-
-def normalize(x, mean_x=None, std_x=None):
-    """Standardize the original data set."""
-    x = (x - np.mean(x, axis = 0))/(np.amax(x, axis = 0) - np.amin(x, axis = 0))
-    
     if std_x is None:
         std_x = np.std(x, axis=0)
     x[:, std_x>0] = x[:, std_x>0] / std_x[std_x>0]
     
+    return x, mean_x, std_x
+
+def normalize(x, mean_x=None, std_x=None):
+    """Standardize the original data set."""
+    if mean_x is None:
+        mean_x = np.mean(x, axis=0)
+    x = x - mean_x   
+    if std_x is None:
+        std_x = np.std(x, axis=0)
+    x[:, std_x>0] = x[:, std_x>0] / std_x[std_x>0]
     
-    
-    tx = np.hstack((np.ones((x.shape[0],1)), x))
-    return tx, mean_x, std_x
+    x = x/(np.amax(x, axis = 0) - np.amin(x, axis = 0))  
+    return x, mean_x, std_x       
 
 def accuracy(weights, features, targets, nr_traindata, model_type):
     if(model_type == "linear"):        
@@ -179,9 +181,7 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model_type, max_iters 
         y_test = y[mask]
 
         x_train = build_poly(x_train, degree)
-        x_train, _, _ = standardize(x_train)
         x_test = build_poly(x_test, degree)
-        x_test, _, _ = standardize(x_test)
         
         initial_w = np.zeros(x_train.shape[1])
         
