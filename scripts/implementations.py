@@ -33,7 +33,7 @@ def replace999mass(data):
     return doit
 
 
-def split_data_by_jet_num(data):
+def split_data_by_jet_num(data, labels):
     jet_num_index = 22
     mask0 = [4, 5, 6, 12, 23, 24, 25, 26, 27, 28]
     mask1 = [4, 5, 6, 12, 26, 27, 28]
@@ -44,16 +44,24 @@ def split_data_by_jet_num(data):
     jetmask3 = np.ones(nr_columns, dtype=bool)
     jetmask0[mask0] = False
     jetmask1[mask1] = False
-    splitdata0 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0]), :]
+    m0 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0])
+    m1 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0])
+    m2 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0])
+    m3 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0])
+    splitdata0 = data[m0, :]
+    labels0 = labels[m0]
     splitdata0 = splitdata0[:, np.ndarray.tolist(np.where(jetmask0)[0])]
-    splitdata1 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0]), :]
+    splitdata1 = data[m1, :]
+    labels1 = labels[m1]
     splitdata1 = splitdata1[:, np.ndarray.tolist(np.where(jetmask1)[0])]
-    splitdata2 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0]), :]
+    splitdata2 = data[m2, :]
+    labels2 = labels[m2]
     splitdata2 = splitdata2[:, np.ndarray.tolist(np.where(jetmask2)[0])]
-    splitdata3 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0]), :]
+    splitdata3 = data[m3, :]
+    labels3 = labels[m3]
     splitdata3 = splitdata3[:, np.ndarray.tolist(np.where(jetmask3)[0])]
 
-    return splitdata0, splitdata1, splitdata2, splitdata3
+    return splitdata0, splitdata1, splitdata2, splitdata3, labels0, labels1, labels2, labels3
 
 
 def add_sin_cos(data, nr_columns, nr_data):
