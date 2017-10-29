@@ -39,12 +39,10 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
 
 def add_mass_binaries(data):
     nrdata, nrcolumns = data.shape
-    newdata = np.zeros((nrdata, nrcolumns+2))
-    mask1 = data[:, 0] == -999
-    mask2 = data[:, 1] != -999
+    newdata = np.zeros((nrdata, nrcolumns+1))
+    mask = data[:, 0] == -999
     newdata[:, 0:nrcolumns] = data
-    newdata[:, -2] = mask1.astype(int)
-    newdata[:, -1] = mask2.astype(int)
+    newdata[:, -1] = mask.astype(int)
     return newdata
 
 
