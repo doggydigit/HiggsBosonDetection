@@ -38,7 +38,7 @@ def white_cubic_features(data, nr_columns, nr_data):
 
 def build_poly(x, degree):
     """polynomial basis functions for input data x, for j=0 up to j=degree."""
-    a = np.ones(x.shape)
+    a = np.ones(x.shape[0])
     for deg in np.arange(1, degree+1):
         b = np.power(x, deg)
         b[b == (-999)**deg] = -999
@@ -71,6 +71,19 @@ def standardize(x):
     x = x / std_x
     return x, mean_x, std_x
 
+def normalize(x, mean_x=None, std_x=None):
+    """Standardize the original data set."""
+    x = (x - np.mean(x, axis = 0))/(np.amax(x, axis = 0) - np.amin(x, axis = 0))
+    
+    if std_x is None:
+        std_x = np.std(x, axis=0)
+    x[:, std_x>0] = x[:, std_x>0] / std_x[std_x>0]
+    
+    
+    
+    tx = np.hstack((np.ones((x.shape[0],1)), x))
+    return tx, mean_x, std_x
+
 def accuracy(weights, features, targets, nr_traindata, model_type):
     if(model_type == "linear"):        
         train_predictions = predict_labels(weights, features)
@@ -95,12 +108,12 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model_type, max_iters 
         x_test = build_poly(x_test, degree)
         x_test, _, _ = standardize(x_test)
         
-        initial_w = np.random.random(x_train.shape[1])
+        initial_w = np.zeros(x_train.shape[1])
         
         if(model_type == "linear"):
             weights = ridge_regression(y_train, x_train, lambda_)
         elif(model_type == "logistic"):
-             weights, _ = reg_logistic_regression(y_train, x_train, lambda_, initial_w, max_iters, gamma)
+            weights, _ = reg_logistic_regression(y_train, x_train, lambda_, initial_w, max_iters, gamma)
         #loss_tr_arr[i] = np.sqrt(2 * compute_mse(y_train, x_train, weights))
         loss_tr_arr[i] = accuracy(weights, x_train, y_train, x_train.shape[0], model_type)
        # loss_te_arr[i] = np.sqrt(2 * compute_mse(y_test, x_test, weights))
@@ -143,6 +156,11 @@ def insert_mean_for_nan(data):
     for i in range(data.shape[1]):
         data[data[:, i] == -999, i] = np.nan
         data[np.isnan(data[:, i]), i] = np.nanmean(data[:, i])
+        
+def insert_median_for_nan(data):
+    for i in range(data.shape[1]):
+        data[data[:, i] == -999, i] = np.nan
+        data[np.isnan(data[:, i]), i] = np.nanmedian(data[:, i])
     
 # Functions for linear regression task
 
@@ -209,30 +227,40 @@ def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, 
     ws = [initial_w]
     losses = []
     w = initial_w
+    threshold = 1e-8
+
     for n_iter in range(max_iters):              
         n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
         w = w - gamma*compute_stoch_gradient(y[n], tx[n], w, lambda_)
         ws.append(w)
         loss = compute_loss(y, tx, w)
         losses.append(loss)
-        print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
+        if(n_iter%1000 == 0):
+            print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
               bi=n_iter, ti=max_iters - 1, l=loss, w = w.dot(w), g = gamma))
-
+        if len(losses) > 1 and np.abs(losses[-1] - losses[-2]) < threshold:
+            break
     return losses, ws
 
 # Functions for logistic regression
 
-def sigmoid(t):
-    """apply sigmoid function on t."""
-    return np.exp(t)/(1 + np.exp(t))
+#def sigmoid(t):
+#    """apply sigmoid function on t."""
+#    return np.exp(t)/(1 + np.exp(t))
+
+def sigmoid(x):
+    "Numerically-stable sigmoid function."
+    return np.exp(-np.logaddexp(0, -x))
 
 def calculate_loss(y, tx, w):
     """compute the cost by negative log likelihood."""
     return np.sum(np.log(1 + np.exp(tx.dot(w))) - y * tx.dot(w))
 
+
 def calculate_gradient(y, tx, w, lambda_ = 0):
     """compute the gradient of loss."""
     return tx.T.dot((sigmoid(tx.dot(w)) - y)) + lambda_ * np.abs(w)
+
 
 def learning_by_gradient_descent(y, tx, w, gamma, lambda_ = 0):
     """
@@ -249,17 +277,20 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     batch_size = 1
     for i in range(max_iters):
         n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
-        weigths = weights - gamma * calculate_gradient(y[n], tx[n], weights, lambda_)
+        _, weights = learning_by_penalized_gradient(y, tx, weights, gamma, lambda_)
+        if(i%50 == 0):
+            loss = calculate_loss(y, tx, weights)
+            print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
+              bi=i, ti=max_iters - 1, l=loss, w = weights, g = gamma))
         #print("Weights = " + str(weights))
     loss = calculate_loss(y, tx, weights)
     return weights, loss
          
 def calculate_hessian(y, tx, w):
     """return the hessian of the loss function."""
-    temp = tx.dot(w)
-    S = np.identity(len(tx)) * sigmoid(temp) * (1 - sigmoid(temp))
-    H = tx.T.dot(S).dot(tx)
-    return H
+    Sig_txw = sigmoid(np.dot(tx,w))
+    S = (Sig_txw*(1-Sig_txw)).flatten()
+    return np.dot((tx.T)*S,tx)
 
 def logistic_regression_newton(y, tx, w):
     """return the loss, gradient, and hessian."""
@@ -281,7 +312,7 @@ def penalized_logistic_regression(y, tx, w, lambda_):
     """return the loss, gradient, and hessian."""
     loss, gradient, hessian = logistic_regression_newton(y, tx, w)
     reg = (lambda_/2) * w.T.dot(w)
-    return loss+reg, gradient, hessian
+    return loss+reg, gradient + 2*lambda_*w, hessian + 2*lambda_*np.eye(w.shape[0])
 
 def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
     """

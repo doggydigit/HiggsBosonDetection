@@ -2,6 +2,7 @@
 """some helper functions for project 1."""
 import csv
 import numpy as np
+from implementations import sigmoid
 
 
 def load_csv_data(data_path, sub_sample=False):
@@ -34,7 +35,7 @@ def predict_labels(weights, data):
 
 def predict_labels_lg(weights, data):
     """Generates class predictions given weights, and a test data matrix for logistic regression"""
-    y_pred = np.dot(data, weights)
+    y_pred = sigmoid(np.dot(data, weights))
     y_pred[np.where(y_pred <= 0.5)] = -1
     y_pred[np.where(y_pred > 0.5)] = 1
     
