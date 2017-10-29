@@ -37,9 +37,15 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
     return weights[-1],losses[-1]
 
 
-def replace999mass(data):
-    doit = True
-    return doit
+def add_mass_binaries(data):
+    nrdata, nrcolumns = data.shape
+    newdata = np.zeros((nrdata, nrcolumns+2))
+    mask1 = data[:, 0] == -999
+    mask2 = data[:, 1] != -999
+    newdata[:, 0:nrcolumns] = data
+    newdata[:, -2] = mask1.astype(int)
+    newdata[:, -1] = mask2.astype(int)
+    return newdata
 
 
 def split_data_by_jet_num(data, labels):
@@ -77,8 +83,40 @@ def split_data_by_jet_num(data, labels):
     return splitdata0, splitdata1, splitdata2, splitdata3, labels0, labels1, labels2, labels3
 
 
-def add_sin_cos(data, nr_columns, nr_data):
-    radian_indexes = [15, 18, 20, 25, 28]
+def split_testdata_by_jet_num(data):
+    jet_num_index = 22
+    mask0 = [4, 5, 6, 12, 22, 23, 24, 25, 26, 27, 28, 29]
+    mask1 = [4, 5, 6, 12, 22, 26, 27, 28]
+    mask2 = [22]
+    mask3 = [22]
+    nr_columns = len(data[0])
+    jetmask0 = np.ones(nr_columns, dtype=bool)
+    jetmask1 = np.ones(nr_columns, dtype=bool)
+    jetmask2 = np.ones(nr_columns, dtype=bool)
+    jetmask3 = np.ones(nr_columns, dtype=bool)
+    jetmask0[mask0] = False
+    jetmask1[mask1] = False
+    jetmask2[mask2] = False
+    jetmask3[mask3] = False
+    m0 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0])
+    m1 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0])
+    m2 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0])
+    m3 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0])
+    splitdata0 = data[m0, :]
+    splitdata0 = splitdata0[:, np.ndarray.tolist(np.where(jetmask0)[0])]
+    splitdata1 = data[m1, :]
+    splitdata1 = splitdata1[:, np.ndarray.tolist(np.where(jetmask1)[0])]
+    splitdata2 = data[m2, :]
+    splitdata2 = splitdata2[:, np.ndarray.tolist(np.where(jetmask2)[0])]
+    splitdata3 = data[m3, :]
+    splitdata3 = splitdata3[:, np.ndarray.tolist(np.where(jetmask3)[0])]
+
+    return splitdata0, splitdata1, splitdata2, splitdata3, m0, m1, m2, m3
+
+
+def add_sin_cos(data):
+    nr_data, nr_columns = data.shape
+    radian_indexes = [15, 18, 20]
     newdata = np.zeros((nr_data, nr_columns + 2*len(radian_indexes)))
     newdata[:, :nr_columns] = data
     n = 0
@@ -90,9 +128,7 @@ def add_sin_cos(data, nr_columns, nr_data):
     return newdata
 
 
-def second_order_features(data):
-    nr_data, nr_columns = data.shape
-    warnings.filterwarnings('error')
+def second_order_features(data, nr_columns, nr_data):
     nr_features= nr_columns**2 + nr_columns + 1
     features = np.zeros([nr_data, nr_features])
 
@@ -105,16 +141,89 @@ def second_order_features(data):
     for f in range(0, nr_columns):
         features[:, nr_columns**2 + f] = data[:, f]
 
+    warnings.filterwarnings('error')
     # Whitening features
     for f in range(0, nr_features-1):
         try:
             features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
         except Warning:
-            print(f, np.std(features[:, f]))
+            print(f)
+            print(np.mean(features[:, f]))
+            print(np.std(features[:, f]))
+
+    # Add bias
+    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
+    return features
+
+
+def second_order_features_and_cubic(data):
+    nr_data, nr_columns = data.shape
+    nr_features = nr_columns**2 + 2*nr_columns + 1
+    features = np.zeros([nr_data, nr_features])
+
+    # second order terms
+    for f1 in range(0, nr_columns):
+        for f2 in range(0, nr_columns):
+            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
+
+    # first order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns**2 + f] = data[:, f]
+
+    # cubic order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
+
+    warnings.filterwarnings('error')
+    # Whitening features
+    means = np.zeros(nr_features)
+    stds = np.zeros(nr_features)
+    for f in range(0, nr_features-1):
+        means[f] = np.mean(features[:, f])
+        stds[f] = np.std(features[:, f])
+        try:
+            features[:, f] = (features[:, f] - means[f]) / stds[f]
+        except Warning:
+            print(f)
+            print(np.mean(features[:, f]))
+            print(np.std(features[:, f]))
 
     # Add bias
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
     return features, means, stds
+
+
+def second_order_features_and_cubic_for_test(data, means, stds):
+    nr_data, nr_columns = data.shape
+    nr_features = nr_columns**2 + 2*nr_columns + 1
+    features = np.zeros([nr_data, nr_features])
+
+    # second order terms
+    for f1 in range(0, nr_columns):
+        for f2 in range(0, nr_columns):
+            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
+
+    # first order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns**2 + f] = data[:, f]
+
+    # cubic order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
+
+    warnings.filterwarnings('error')
+    # Whitening features
+    for f in range(0, nr_features-1):
+        try:
+            features[:, f] = (features[:, f] - means[f]) / stds[f]
+        except Warning:
+            print(f)
+            print(np.mean(features[:, f]))
+            print(np.std(features[:, f]))
+
+    # Add bias
+    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
+    return features
 
 
 # Additional funtions to manipulate the data
