@@ -6,11 +6,11 @@ import warnings
 '''
 Required implementations:
 
-least_squares_GD(y, tx, initial w,
+DONE: least_squares_GD(y, tx, initial w,
 max iters, gamma)
 Linear regression using gradient descent
 
-least_squares_SGD(y, tx, initial w,
+DONE: least_squares_SGD(y, tx, initial w,
 max iters, gamma)
 Linear regression using stochastic gradient descent
 
@@ -27,6 +27,14 @@ initial w, max iters, gamma)
 Regularized logistic regression using gradient descent
 or SGD
 '''
+
+def least_squares_GD(y, tx, initial_w, max_iters, gamma):
+    weights,losses = gradient_descent(y, tx, initial_w, max_iters, gamma, 0)
+    return weights[-1],losses[-1]
+
+def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
+    weights,losses = stochastic_gradient_descent(y, tx, initial_w, 1, max_iters, gamma, 0)
+    return weights[-1],losses[-1]
 
 
 def replace999mass(data):
@@ -296,10 +304,10 @@ def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
         w = w - gamma*compute_gradient(y, tx, w, lambda_)
         ws.append(w)
         losses.append(loss)
-        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
-              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+        #print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
+        #      bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
 
-    return losses, ws
+    return ws,losses
 
 def compute_stoch_gradient(y, tx, w, lambda_):
     """Compute a stochastic gradient from just few examples n and their corresponding y_n labels."""
@@ -318,12 +326,12 @@ def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, 
         ws.append(w)
         loss = compute_loss(y, tx, w)
         losses.append(loss)
-        if(n_iter%1000 == 0):
-            print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
-              bi=n_iter, ti=max_iters - 1, l=loss, w = w.dot(w), g = gamma))
+        #if(n_iter%1000 == 0):
+            #print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
+            #  bi=n_iter, ti=max_iters - 1, l=loss, w = w.dot(w), g = gamma))
         if len(losses) > 1 and np.abs(losses[-1] - losses[-2]) < threshold:
             break
-    return losses, ws
+    return ws,losses
 
 # Functions for logistic regression
 
