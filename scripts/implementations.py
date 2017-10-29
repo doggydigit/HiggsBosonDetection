@@ -98,14 +98,11 @@ def second_order_features(data, nr_columns, nr_data):
 
     # Whitening features
     for f in range(0, nr_features-1):
-        try:
-            features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
-        except Warning:
-            print f, np.std(features[:, f])
+        features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
 
     # Add bias
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
+    return features, means, stds
 
 
 # Additional funtions to manipulate the data
@@ -260,7 +257,7 @@ def ridge_regression(y, tx, lambda_):
     b = np.dot(tx.T, y)
     weights = np.linalg.solve(a, b)
     loss = compute_mse(y,tx,weights)
-    return weigths,loss
+    return weights,loss
 
 
 def least_squares(y, tx):
