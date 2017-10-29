@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from proj1_helpers import *
+import warnings
 
 '''
 Required implementations:
@@ -35,8 +36,10 @@ def replace999mass(data):
 
 def split_data_by_jet_num(data, labels):
     jet_num_index = 22
-    mask0 = [4, 5, 6, 12, 23, 24, 25, 26, 27, 28]
-    mask1 = [4, 5, 6, 12, 26, 27, 28]
+    mask0 = [4, 5, 6, 12, 22, 23, 24, 25, 26, 27, 28, 29]
+    mask1 = [4, 5, 6, 12, 22, 26, 27, 28]
+    mask2 = [22]
+    mask3 = [22]
     nr_columns = len(data[0])
     jetmask0 = np.ones(nr_columns, dtype=bool)
     jetmask1 = np.ones(nr_columns, dtype=bool)
@@ -44,6 +47,8 @@ def split_data_by_jet_num(data, labels):
     jetmask3 = np.ones(nr_columns, dtype=bool)
     jetmask0[mask0] = False
     jetmask1[mask1] = False
+    jetmask2[mask2] = False
+    jetmask3[mask3] = False
     m0 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0])
     m1 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0])
     m2 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0])
@@ -66,7 +71,7 @@ def split_data_by_jet_num(data, labels):
 
 def add_sin_cos(data, nr_columns, nr_data):
     radian_indexes = [15, 18, 20, 25, 28]
-    newdata = np.zeros(nr_data, nr_columns + 2*len(radian_indexes))
+    newdata = np.zeros((nr_data, nr_columns + 2*len(radian_indexes)))
     newdata[:, :nr_columns] = data
     n = 0
     for f in radian_indexes:
@@ -77,8 +82,8 @@ def add_sin_cos(data, nr_columns, nr_data):
     return newdata
 
 
-
 def second_order_features(data, nr_columns, nr_data):
+    warnings.filterwarnings('error')
     nr_features= nr_columns**2 + nr_columns + 1
     features = np.zeros([nr_data, nr_features])
 
@@ -93,7 +98,10 @@ def second_order_features(data, nr_columns, nr_data):
 
     # Whitening features
     for f in range(0, nr_features-1):
-        features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
+        try:
+            features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
+        except Warning:
+            print f, np.std(features[:, f])
 
     # Add bias
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
@@ -102,7 +110,7 @@ def second_order_features(data, nr_columns, nr_data):
 
 # Additional funtions to manipulate the data
 def white_cubic_features(data, nr_columns, nr_data):
-    nr_features=3*nr_columns + 1
+    nr_features = 3*nr_columns + 1
     features = np.zeros([nr_data, nr_features])
     for f in range(0, nr_columns):
         features[:, 3*f] = (data[:, f] - np.mean(data[:, f])) / np.std(data[:, f])
