@@ -2,6 +2,73 @@ import numpy as np
 import matplotlib.pyplot as plt
 from proj1_helpers import *
 
+'''
+Required implementations:
+
+least_squares_GD(y, tx, initial w,
+max iters, gamma)
+Linear regression using gradient descent
+
+least_squares_SGD(y, tx, initial w,
+max iters, gamma)
+Linear regression using stochastic gradient descent
+
+DONE: least_squares(y, tx) Least squares regression using normal equations
+
+DONE: ridge_regression(y, tx, lambda ) Ridge regression using normal equations
+
+DONE: logistic_regression(y, tx, initial w,
+max iters, gamma)
+Logistic regression using gradient descent or SGD
+
+DONE: reg_logistic_regression(y, tx, lambda ,
+initial w, max iters, gamma)
+Regularized logistic regression using gradient descent
+or SGD
+'''
+
+
+def replace999mass(data):
+    doit = True
+    return doit
+
+
+def split_data_by_jet_num(data):
+    jet_num_index = 22
+    mask0 = [4, 5, 6, 12, 23, 24, 25, 26, 27, 28]
+    mask1 = [4, 5, 6, 12, 26, 27, 28]
+    nr_columns = len(data[0])
+    jetmask0 = np.ones(nr_columns, dtype=bool)
+    jetmask1 = np.ones(nr_columns, dtype=bool)
+    jetmask2 = np.ones(nr_columns, dtype=bool)
+    jetmask3 = np.ones(nr_columns, dtype=bool)
+    jetmask0[mask0] = False
+    jetmask1[mask1] = False
+    splitdata0 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 0)[0]), :]
+    splitdata0 = splitdata0[:, np.ndarray.tolist(np.where(jetmask0)[0])]
+    splitdata1 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 1)[0]), :]
+    splitdata1 = splitdata1[:, np.ndarray.tolist(np.where(jetmask1)[0])]
+    splitdata2 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0]), :]
+    splitdata2 = splitdata2[:, np.ndarray.tolist(np.where(jetmask2)[0])]
+    splitdata3 = data[np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0]), :]
+    splitdata3 = splitdata3[:, np.ndarray.tolist(np.where(jetmask3)[0])]
+
+    return splitdata0, splitdata1, splitdata2, splitdata3
+
+
+def add_sin_cos(data, nr_columns, nr_data):
+    radian_indexes = [15, 18, 20, 25, 28]
+    newdata = np.zeros(nr_data, nr_columns + 2*len(radian_indexes))
+    newdata[:, :nr_columns] = data
+    n = 0
+    for f in radian_indexes:
+        newdata[:, nr_columns+n] = np.sin(data[:, f])
+        n += 1
+        newdata[:, nr_columns + n] = np.cos(data[:, f])
+        n += 1
+    return newdata
+
+
 
 def second_order_features(data, nr_columns, nr_data):
     nr_features= nr_columns**2 + nr_columns + 1
@@ -172,17 +239,20 @@ def sgd_step(target, features, weights, gamma):
 
 
 def ridge_regression(y, tx, lambda_):
-    """Returns only weights"""
     shape = np.shape(np.dot(tx.T, tx))
     a = np.dot(tx.T, tx) + lambda_*(2.0*len(y)) * np.identity(shape[0])
     b = np.dot(tx.T, y)
-    return np.linalg.solve(a, b)
+    weights = np.linalg.solve(a, b)
+    loss = compute_mse(y,tx,weights)
+    return weigths,loss
 
 
 def least_squares(y, tx):
     a = np.dot(tx.T, tx)
     b = np.dot(tx.T, y)
-    return np.linalg.solve(a, b)
+    weights = np.linalg.solve(a, b)
+    loss = compute_mse(y,tx,weights)
+    return weights,loss
 
 
 def compute_mse(y, tx, w):
@@ -285,6 +355,9 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         #print("Weights = " + str(weights))
     loss = calculate_loss(y, tx, weights)
     return weights, loss
+
+def logistic_regression(y, tx, initial_w, max_iters, gamma):
+    return reg_logistic_regression(y, tx, 0, initial_w, max_iters, gamma)
          
 def calculate_hessian(y, tx, w):
     """return the hessian of the loss function."""
