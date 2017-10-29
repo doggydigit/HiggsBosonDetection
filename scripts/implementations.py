@@ -90,7 +90,8 @@ def add_sin_cos(data, nr_columns, nr_data):
     return newdata
 
 
-def second_order_features(data, nr_columns, nr_data):
+def second_order_features(data):
+    nr_data, nr_columns = data.shape
     warnings.filterwarnings('error')
     nr_features= nr_columns**2 + nr_columns + 1
     features = np.zeros([nr_data, nr_features])
@@ -106,7 +107,10 @@ def second_order_features(data, nr_columns, nr_data):
 
     # Whitening features
     for f in range(0, nr_features-1):
-        features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
+        try:
+            features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
+        except Warning:
+            print(f, np.std(features[:, f]))
 
     # Add bias
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
@@ -181,7 +185,7 @@ def accuracy(weights, features, targets, nr_traindata, model_type):
          train_predictions = predict_labels_lg(weights, features)
     return 1-(nr_traindata-train_predictions.dot(targets))/(2*nr_traindata)
 
-def cross_validation(y, x, k_indices, k, lambda_, degree, model_type, max_iters = 1000, gamma = 0.01):
+def cross_validation(y, x, k_indices, k, lambda_, model_type, max_iters = 1000, gamma = 0.01):
     """return the loss of ridge regression."""
     loss_tr_arr = np.zeros(k)
     loss_te_arr = np.zeros(k)
@@ -191,15 +195,12 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model_type, max_iters 
         x_train = x[~mask]
         y_train = y[~mask]
         x_test = x[mask]
-        y_test = y[mask]
-
-        x_train = build_poly(x_train, degree)
-        x_test = build_poly(x_test, degree)
+        y_test = y[mask]      
         
         initial_w = np.zeros(x_train.shape[1])
         
         if(model_type == "linear"):
-            weights = ridge_regression(y_train, x_train, lambda_)
+            weights, _ = ridge_regression(y_train, x_train, lambda_)
         elif(model_type == "logistic"):
             weights, _ = reg_logistic_regression(y_train, x_train, lambda_, initial_w, max_iters, gamma)
         #loss_tr_arr[i] = np.sqrt(2 * compute_mse(y_train, x_train, weights))
@@ -265,7 +266,7 @@ def ridge_regression(y, tx, lambda_):
     b = np.dot(tx.T, y)
     weights = np.linalg.solve(a, b)
     loss = compute_mse(y,tx,weights)
-    return weights,loss
+    return weights ,loss
 
 
 def least_squares(y, tx):
@@ -367,12 +368,12 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     weights = initial_w
     batch_size = 1
     for i in range(max_iters):
-        n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
+        #n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
         _, weights = learning_by_penalized_gradient(y, tx, weights, gamma, lambda_)
         if(i%50 == 0):
             loss = calculate_loss(y, tx, weights)
-            print("SGD({bi}/{ti}): loss={l}, norm of weights={w}, gamma={g}".format(
-              bi=i, ti=max_iters - 1, l=loss, w = weights, g = gamma))
+            print("SGD({bi}/{ti}): loss={l}, gamma={g}".format(
+              bi=i, ti=max_iters - 1, l=loss, g = gamma))
         #print("Weights = " + str(weights))
     loss = calculate_loss(y, tx, weights)
     return weights, loss
