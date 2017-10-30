@@ -31,11 +31,61 @@ or SGD
 
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
+    """
+    Linear regression model using gradient descent algorithm
+    
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+        
+        initial_w : np.array
+        Initial weights/starting point for optimization.
+        
+        max_iters : int
+        Maximal number of iterations for algorithm.
+        
+        gamma : float
+        Learning rate of the gradient descent.
+
+    Returns:
+        (weights, loss) : (np.array, float) 
+        
+        weights : Final weights for the model.
+        loss : Final loss value.     
+    """
     weights, losses = gradient_descent(y, tx, initial_w, max_iters, gamma, 0)
     return weights[-1], losses[-1]
 
 
 def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
+    """
+    Linear regression model using stochastic gradient descent algorithm
+    
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+        
+        initial_w : np.array
+        Initial weights/starting point for optimization.
+        
+        max_iters : int
+        Maximal number of iterations for algorithm.
+        
+        gamma : float
+        Learning rate of the gradient descent.
+
+    Returns:
+        (weights, loss) : (np.array, float) 
+        weights : Final weights for the model.
+        
+        loss : Final loss value.     
+    """
     weights, losses = stochastic_gradient_descent(y, tx, initial_w, 1, max_iters, gamma, 0)
     return weights[-1], losses[-1]
 
@@ -502,7 +552,21 @@ def white_cubic_features(data, nr_columns, nr_data):
 
 
 def build_poly(x, degree):
-    """polynomial basis functions for input data x, for j=0 up to j=degree."""
+    """
+    Polynomial basis functions for input data x, for j=0 up to j=degree.
+    If there is a missing value -999 it does not change it.
+
+        Args: 
+        x : np.array
+        Training dataset.
+        
+        degree : np.array
+        Maximal degree of polynomial.
+
+    Returns:
+        a : np.array
+        Dataset with polynomial attributes.
+    """
     a = np.ones(x.shape[0])
     for deg in np.arange(1, degree+1):
         b = np.power(x, deg)
@@ -557,7 +621,29 @@ def normalize(x, mean_x=None, std_x=None):
 
 
 def accuracy(weights, features, targets, nr_traindata, model_type):
-    """Return accuracy value for given dataset and model type"""
+    """
+    Return accuracy value for given dataset and model type
+    
+    Args: 
+        weights : np.array
+        Weights of a model.
+        
+        features : np.array
+        Dataset to compute the accuracy.
+
+        targets : np.array
+        Labels or values for the dataset.
+
+        nr_traindata : int
+        Number of samples in the dataset.
+
+        model_type : string
+        Model for which the accuracy is measured ["linear"|"logistic"|"logistic_cv"]
+
+    Returns:
+        np.array
+        Accuracy of the model
+    """
     if model_type == "linear":
         train_predictions = predict_labels(weights, features)
     elif model_type == "logistic":
@@ -568,7 +654,37 @@ def accuracy(weights, features, targets, nr_traindata, model_type):
 
 
 def cross_validation(y, x, k_indices, k, lambda_, model_type, max_iters = 1000, gamma = 0.01):
-    """return the accuracy of ridge regression or logistic regression based on model_type variable."""
+    """
+    Perform k-fold cross-validation and return the accuracy of ridge regression
+    or logistic regression based on model_type variable.
+
+    Args: 
+        y : np.array
+        Labels/targets for dataset.
+        
+        x : np.array
+        Dataset without labels.
+
+        k_indicies : np.array
+        Array containing indicies of samples for each CV.
+
+        k : int
+        Number of folds of CV.
+
+        model_type : string
+        Model for which the accuracy is measured ["linear"|"logistic"|"logistic_cv"]
+
+        max_iters : int
+        Maximal number of iterations of algorithm.
+        
+        gamma : float
+        Learning rate of the gradient descent.
+
+    Returns:
+        acc_tr, acc_te : (float, float)
+        acc_tr : Accuracy of the model on train dataset
+        acc_te : Accuracy of the model on test dataset
+    """
     acc_tr_arr = np.zeros(k)
     acc_te_arr = np.zeros(k)
     for i in range(k):
@@ -585,9 +701,7 @@ def cross_validation(y, x, k_indices, k, lambda_, model_type, max_iters = 1000, 
             weights, _ = ridge_regression(y_train, x_train, lambda_)
         elif(model_type == "logistic_cv"):
             weights, _ = reg_logistic_regression(y_train, x_train, lambda_, initial_w, max_iters, gamma)
-        #loss_tr_arr[i] = np.sqrt(2 * compute_mse(y_train, x_train, weights))
         acc_tr_arr[i] = accuracy(weights, x_train, y_train, x_train.shape[0], model_type)
-       # loss_te_arr[i] = np.sqrt(2 * compute_mse(y_test, x_test, weights))
         acc_te_arr[i] = accuracy(weights, x_test, y_test, x_test.shape[0], model_type)
         
     acc_tr = np.mean(acc_tr_arr)
@@ -609,11 +723,21 @@ def cross_validation_visualization(lambds, mse_tr, mse_te):
 
 
 def plot_corr_matrix(corr_matrix, labels):
-    """Plot correlation matrix for given dataset and its headers"""
+    """
+    Plot correlation matrix for given dataset and its headers
+    
+    Args:
+        corr_matrix : np.array
+        Correlation matrix
+
+        labels : list of strings
+        Names of variables in correlation matrix
+    """
     fig_cor, axes_cor = plt.subplots(1,1)
     fig_cor.set_size_inches(12, 12)
 
     myimage = axes_cor.imshow(corr_matrix, cmap='seismic', interpolation='nearest', vmax=1, vmin = -1)
+    axes_cor.set_facecolor('white')
     plt.colorbar(myimage)
 
     axes_cor.set_xticks(np.arange(0,corr_matrix.shape[0], corr_matrix.shape[0]*1.0/len(labels)))
@@ -666,7 +790,21 @@ def ridge_regression(y, tx, lambda_):
 
 
 def least_squares(y, tx):
-    """Linear regression using normal equations"""
+    """Linear regression using normal equations
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+    Returns:
+        (weights, loss) : (np.array, float) 
+        
+        weights : Final weights for the model.
+        loss : Final loss value.     
+    """
     a = np.dot(tx.T, tx)
     b = np.dot(tx.T, y)
     weights = np.linalg.solve(a, b)
@@ -675,27 +813,101 @@ def least_squares(y, tx):
 
 
 def compute_mse(y, tx, w):
-    """compute the loss by mse."""
+    """
+    Compute the loss by mse.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+    Returns:
+        mse : float
+        Final loss value.     
+    """
     e = y - tx.dot(w)
     mse = e.dot(e) / (2 * len(e))
     return mse
 
 
 def compute_loss(y, tx, w):
-    """compute the loss by mse."""
+    """
+    Compute the loss by mse.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+    Returns:
+        mse : float
+        Loss value. 
+    """
     e = y - tx.dot(w)
     mse = e.dot(e) / (2 * len(e))
     return mse
 
 
 def compute_gradient(y, tx, w, lambda_ = 0):
-    """Compute the gradient."""
+    """
+    Compute the gradient.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        gradient : float
+        Gradient of a loss function. 
+    """
     error = y - tx.dot(w)
     return (-1/y.shape[0]) * np.dot(tx.T, error.T) + 2*lambda_*w
 
 
 def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
-    """Gradient descent algorithm."""
+    """
+    Gradient descent algorithm.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        initial_w : np.array
+        Initial weights for algorithm
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        (losses, ws) : (np.array, np.array)
+        losses - array of losses during optimization process
+        ws - array of weights from every step of the algorithm.
+    """
     # Define parameters to store w and loss
     ws = [initial_w]
     losses = []
@@ -714,12 +926,60 @@ def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
 
 
 def compute_stoch_gradient(y, tx, w, lambda_):
-    """Compute a stochastic gradient from just few examples n and their corresponding y_n labels."""
+    """
+    Compute a stochastic gradient from just few examples n and their corresponding y_n labels.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        gradient : float
+        Gradient of a loss function. 
+    """
     return compute_gradient(y, tx, w, lambda_)
 
 
 def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, lambda_ = 0):
-    """Stochastic gradient descent algorithm for linear regression."""
+    """
+    Stochastic gradient descent algorithm for linear regression.
+
+        Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        initial_w : np.array
+        Initial weights for algorithm.
+
+        batch_size : int
+        Batch size used to compute gradient of a function.
+
+        max_iters : int
+        Maximal number of iterations of algorithm.
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        (losses, ws) : (np.array, np.array)
+        losses - array of losses during optimization process
+        ws - array of weights from every step of the algorithm.
+    """
     ws = [initial_w]
     losses = []
     w = initial_w
@@ -744,24 +1004,73 @@ def sigmoid(t):
     """apply sigmoid function on t."""
     return np.exp(t)/(1 + np.exp(t))
 
-#def sigmoid(x):
-#    "Numerically-stable sigmoid function."
-#    return np.exp(-np.logaddexp(0, -x))
-
 
 def calculate_loss(y, tx, w):
-    """compute the cost by negative log likelihood."""
+    """
+    Compute the cost by negative log likelihood.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+    Returns:
+        loss : float
+        Loss value. 
+    """
     return np.sum(np.log(1 + np.exp(tx.dot(w))) - y * tx.dot(w))
 
 def calculate_gradient(y, tx, w, lambda_ = 0):
-    """compute the gradient of loss."""
+    """
+    Compute the gradient of loss for logistic regression.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        gradient : float
+        Gradient of a loss function.
+    """
     return tx.T.dot((sigmoid(tx.dot(w)) - y)) + lambda_ * np.abs(w)
 
 
 def learning_by_gradient_descent(y, tx, w, gamma, lambda_ = 0):
     """
-    Do one step of gradient descen using logistic regression.
+    Do one step of gradient descent using logistic regression.
     Return the loss and the updated w.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        (loss, w) : (float, np.array)
+        loss - loss value
+        w - weights after one step of GD.
     """
     loss = calculate_loss(y, tx, w)
     grad = calculate_gradient(y, tx, w, lambda_)
@@ -770,7 +1079,33 @@ def learning_by_gradient_descent(y, tx, w, gamma, lambda_ = 0):
 
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
-    """Regularized logistic regression algorithm"""
+    """
+    Regularized logistic regression algorithm
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        lambda_ : float
+        Regularization parameter.
+
+        initial_w : np.array
+        Initial weights for algorithm.
+
+        max_iters : int
+        Maximal number of iterations of algorithm.
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+    Returns:
+        (weights, loss) : (np.array, float)
+        weights - final weights after optimization
+        loss - value of loss.
+    """
     weights = initial_w
     batch_size = 1
     prev_loss, prev_weights = -10, None
@@ -799,19 +1134,79 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
 
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
-    """Logistic regression algorithm"""
+    """
+    Logistic regression algorithm.
+
+        Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        initial_w : np.array
+        Initial weights for algorithm.
+
+        max_iters : int
+        Maximal number of iterations of algorithm.
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+    Returns:
+        (weights, loss) : (np.array, float)
+        weights - final weights after optimization
+        loss - value of loss.
+        """
     return reg_logistic_regression(y, tx, 0, initial_w, max_iters, gamma)
          
 
 def calculate_hessian(y, tx, w):
-    """return the hessian of the loss function."""
-    Sig_txw = sigmoid(np.dot(tx,w))
-    S = (Sig_txw*(1-Sig_txw)).flatten()
-    return np.dot((tx.T)*S,tx)
+    """
+    Return the hessian of the loss function.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : np.array
+        Weights of a model
+
+    Returns:
+        hessian : np.array
+        Hessian of the loss function. 
+    """
+    Sig = sigmoid(np.dot(tx, w))
+    S = (Sig*(1-Sig)).flatten()
+    return np.dot((tx.T)*S, tx)
 
 
 def logistic_regression_newton(y, tx, w, lambda_ = 0):
-    """return the loss, gradient, and hessian."""
+    """
+    Return the loss, gradient, and hessian.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : float
+        Weights of a model.
+
+        lambda_ : float
+        Regularization parameter.
+
+    Returns:
+        (loss, gradient, hessian) : (float, np.array, np.array)
+        loss - Value of loss.
+        gradient - Gradient of a loss function.
+        hessian - Hessian of the loss function.
+    """
     loss = calculate_loss(y, tx, w) + lambda_* np.dot(w.T, w)
     gradient = calculate_gradient(y, tx, w, lambda_)
     hessian = calculate_hessian(y, tx, w) + 2*lambda_*np.eye(w.shape[0])
@@ -820,8 +1215,28 @@ def logistic_regression_newton(y, tx, w, lambda_ = 0):
 
 def learning_by_newton_method(y, tx, w, gamma, lambda_ = 0):
     """
-    Do one step on Newton's method.
-    return the loss and updated w.
+    Do one step on Newton's method. Return the loss and updated w.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : float
+        Weights of a model.
+
+        gamma : float
+        Learning rate of the algorithm.
+
+        lambda_ : float
+        Regularization parameter.
+
+    Returns:
+        (loss, w) : (np.array, float)
+        weights - final weights after optimization
+        loss - value of loss.
     """
     loss, gradient, hessian = logistic_regression_newton(y, tx, w, lambda_)
     w = w - gamma*np.linalg.inv(hessian).dot(gradient)
@@ -829,7 +1244,28 @@ def learning_by_newton_method(y, tx, w, gamma, lambda_ = 0):
 
 
 def penalized_logistic_regression(y, tx, w, lambda_):
-    """return the loss, gradient, and hessian."""
+    """
+    Return the loss, gradient, and hessian.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        gamma : float
+        Learning rate of the gradient descent.
+
+        lambda_ : float
+        Regularization parameter
+
+    Returns:
+        (loss, gradient, hessian) : (float, np.array, np.array)
+        loss - Value of loss.
+        gradient - Gradient of a loss function.
+        hessian - Hessian of the loss function.
+    """
     loss, gradient, hessian = logistic_regression_newton(y, tx, w)
     reg = (lambda_/2) * w.T.dot(w)
     return loss+reg, gradient + 2*lambda_*np.abs(w), hessian + 2*lambda_*np.eye(w.shape[0])
@@ -839,6 +1275,27 @@ def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
     """
     Do one step of gradient descent, using the penalized logistic regression.
     Return the loss and updated w.
+
+    Args: 
+        y : np.array
+        Labels/targets vector.
+        
+        tx : np.array
+        Training dataset.
+
+        w : float
+        Weights of a model.
+
+        gamma : float
+        Learning rate of the algorithm.
+
+        lambda_ : float
+        Regularization parameter.
+
+    Returns:
+        (loss, w) : (np.array, float)
+        weights - final weights after optimization
+        loss - value of loss.
     """
     loss, gradient, hessian = penalized_logistic_regression(y, tx, w, lambda_)
     w = w - gamma*np.linalg.inv(hessian).dot(gradient)
