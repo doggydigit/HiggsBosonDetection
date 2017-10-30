@@ -91,6 +91,17 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
 
 
 def add_mass_binary(data):
+    """
+    Adding a binary feature that is True if the feature DER_mass_MMC is -999 and False otherwise.
+
+    Args
+        data : np.array
+        Training dataset
+
+    Returns:
+        newdata : np.array
+        New matrix of training features with the added binary feature
+    """
     nrdata, nrcolumns = data.shape
     newdata = np.zeros((nrdata, nrcolumns+1))
     mask = data[:, 0] == -999
@@ -100,6 +111,30 @@ def add_mass_binary(data):
 
 
 def split_data_by_jet_num(data, testing=True, labels=0):
+    """
+    Splitting the dataset into 4 sets depending on the value of the feature PRI_jet_num, which can be {0, 1, 2, 3}.
+    This function also removes all jet features containing -999 values according to the PRI_jet_num value.
+    If the dataset given as argument is a training or validation set, the labels can also be added to be split.
+
+    Args
+        data : np.array
+        Dataset to be split
+
+        testing : bool
+        False if the dataset given as argument is the training or validation set
+
+        labels: np.array
+        Array containing the labels of the dataset
+
+    Returns:
+        splitdata0, splitdata1, splitdata2, splitdata3: np.array
+        subsets of the original dataset, whith the -999 jet features removed according to PRI_jet_num values
+
+        m0, m1, m2, m3: list or np.array
+        In case testing = True, these variables are lists that can be used as masks to put the predictions back into the
+        right order. In case testing = False, these variables are arrays of the labels split in the same way as the
+        splitdatas variables.
+    """
     jet_num_index = 22
     mask0 = [4, 5, 6, 12, 22, 23, 24, 25, 26, 27, 28, 29]
     mask1 = [4, 5, 6, 12, 22, 26, 27, 28]
@@ -137,7 +172,40 @@ def split_data_by_jet_num(data, testing=True, labels=0):
 
 
 def build_features(data, order=2, testing=False, means=0, stds=0):
+    """
+    Takes a set of features and adds all the first order interaction terms between those as additional features.
+    It also adds powers of each feature up to order "order", and cubic root of each feature as feature.
+    This function will also add the natural logarithm as well as the square root of each feature that is non-negative.
+    Finally it also whitens each feature and adds a bias feature, which corresponds to an array of ones.
 
+    Args:
+        data : np.array
+        Training dataset
+
+        order : int
+        The maximal degree up to which powers of each feature will be added to the feature matrix.
+        This variable should be >= 3. In case it is 2, no additional powers will be added (beside second order terms)
+
+        testing : bool
+        True if testing data is used and False otherwise
+
+        means : np.array
+        Array of the means of each feature computed from the training data
+
+        stds : np.array
+            Array of the standard deviations of each feature computed from the training data
+
+    Returns:
+        features : np.array
+        New feature matrix with all the added features
+
+        means: np.array
+        Array of all the means corresponding to each feature ecept the bias feature
+
+        stds: np.array
+        Array of all the standard deviations corresponding to each feature ecept the bias feature
+
+    """
     # Getting the indexes of features that are non-negative
     defpos_nr = 0
     defpos_indexes = []
@@ -192,57 +260,6 @@ def build_features(data, order=2, testing=False, means=0, stds=0):
     # Add bias
     features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
     return features, means, stds
-
-
-def build_test_features(data, order=2, testing=False, means=0, stds=0):
-    defpos_nr = 0
-    defpos_indexes = []
-    for i in range(0, len(data[0])):
-        if np.min(data[:, i]) > -0.0000001:
-            defpos_nr += 1
-            defpos_indexes = defpos_indexes + [i]
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + order*nr_columns + 2*defpos_nr + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    for o in range(3, order + 1):
-        for f in range(0, nr_columns):
-            features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
-
-    # cubic root terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + (order-1) * nr_columns + f] = np.cbrt(data[:, f])
-
-    # log terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + order * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
-
-    # square root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + order * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    for f in range(0, nr_features-1):
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
 
 
 def build_poly(x, degree):
