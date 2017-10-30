@@ -41,6 +41,14 @@ def predict_labels_lg(weights, data):
     
     return y_pred
 
+def predict_labels_lg_cv(weights, data):
+    """Generates class predictions given weights, and a test data matrix for logistic regression"""
+    y_pred = sigmoid(np.dot(data, weights))
+    y_pred[np.where(y_pred <= 0.5)] = 0
+    y_pred[np.where(y_pred > 0.5)] = 1
+    
+    return y_pred
+
 def create_csv_submission(ids, y_pred, name):
     """
     Creates an output file in csv format for submission to kaggle
