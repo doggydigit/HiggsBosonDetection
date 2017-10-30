@@ -147,46 +147,6 @@ def split_data_by_jet_num(data, labels):
     return splitdata0, splitdata1, splitdata2, splitdata3, labels0, labels1, labels2, labels3
 
 
-def add_sin_cos(data, nr_columns, nr_data):
-    radian_indexes = [15, 18, 20, 25, 28]
-    newdata = np.zeros((nr_data, nr_columns + 2*len(radian_indexes)))
-    newdata[:, :nr_columns] = data
-    n = 0
-    for f in radian_indexes:
-        newdata[:, nr_columns+n] = np.sin(data[:, f])
-        n += 1
-        newdata[:, nr_columns + n] = np.cos(data[:, f])
-        n += 1
-    return newdata
-
-
-def second_order_features(data):
-    nr_data, nr_columns = data.shape
-    warnings.filterwarnings('error')
-    nr_features= nr_columns**2 + nr_columns + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    # Whitening features
-    for f in range(0, nr_features-1):
-        try:
-            features[:, f] = (features[:, f] - np.mean(features[:, f])) / np.std(features[:, f])
-        except Warning:
-            print(f, np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
-
-
 def build_train_features(data, order=2):
     defpos_nr = 0
     defpos_indexes = []
@@ -195,7 +155,7 @@ def build_train_features(data, order=2):
             defpos_nr += 1
             defpos_indexes = defpos_indexes + [i]
     nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + (order-1)*nr_columns + 3*defpos_nr + 1
+    nr_features = nr_columns**2 + order*nr_columns + 2*defpos_nr + 1
     features = np.zeros([nr_data, nr_features])
 
     # second order terms
@@ -211,17 +171,17 @@ def build_train_features(data, order=2):
         for f in range(0, nr_columns):
             features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
 
+    # cubic root terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + f] = np.cbrt(data[:, f])
+
     # log terms
     for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order - 1) * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
+        features[:, nr_columns ** 2 + order * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
 
     # square root terms
     for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order-1) * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    # cubic root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order-1) * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
+        features[:, nr_columns ** 2 + order * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
 
     warnings.filterwarnings('error')
     # Whitening features
@@ -293,264 +253,6 @@ def build_test_features(data, means, stds, order=2):
     return features
 
 
-def second_order_features_and_4(data):
-    defpos_nr = 0
-    defpos_indexes = []
-    for i in range(0, len(data[0])):
-        if np.min(data[:, i]) > -0.0000001:
-            defpos_nr += 1
-            defpos_indexes = defpos_indexes + [i]
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + 12*nr_columns + 3*defpos_nr + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    # cubic order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
-
-    # forth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 2*nr_columns + f] = data[:, f]**4
-
-    # fifth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 3 * nr_columns + f] = data[:, f]**5
-
-    # sixth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 4 * nr_columns + f] = data[:, f]**6
-
-    # seventh order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 5 * nr_columns + f] = data[:, f] ** 7
-
-    # eighth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 6 * nr_columns + f] = data[:, f] ** 8
-
-    # ninth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 7 * nr_columns + f] = data[:, f] ** 9
-
-    # tenth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 8 * nr_columns + f] = data[:, f] ** 10
-
-    # eleventh order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 9 * nr_columns + f] = data[:, f] ** 11
-
-    # tenth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 10 * nr_columns + f] = data[:, f] ** 12
-
-    # eleventh order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 11 * nr_columns + f] = data[:, f] ** 13
-
-    # eleventh order terms
-    #for f in range(0, nr_columns):
-    #    features[:, nr_columns ** 2 + 12 * nr_columns + f] = np.tanh(data[:, f])
-
-
-    # log terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 12 * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
-
-    # square root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 12 * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    # cubic root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 12 * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    means = np.zeros(nr_features)
-    stds = np.zeros(nr_features)
-    for f in range(0, nr_features-1):
-        means[f] = np.mean(features[:, f])
-        stds[f] = np.std(features[:, f])
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features, means, stds
-
-
-def second_order_features_and_4_for_test(data, means, stds):
-    defpos_nr = 0
-    defpos_indexes = []
-    for i in range(0, len(data[0])):
-        if np.min(data[:, i]) > -0.0000001:
-            defpos_nr += 1
-            defpos_indexes = defpos_indexes + [i]
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + 8*nr_columns + 3*defpos_nr + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    # cubic order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
-
-    # forth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 2*nr_columns + f] = data[:, f]**4
-
-    # fifth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 3 * nr_columns + f] = data[:, f]**5
-
-    # sixth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 4 * nr_columns + f] = data[:, f]**6
-
-    # seventh order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 5 * nr_columns + f] = data[:, f] ** 7
-
-    # eighth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 6 * nr_columns + f] = data[:, f] ** 8
-
-    # ninth order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + 7 * nr_columns + f] = data[:, f] ** 9
-
-
-    # log terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
-
-    # square root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    # cubic root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    for f in range(0, nr_features-1):
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
-
-
-def second_order_features_and_cubic(data):
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + 2*nr_columns + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    # cubic order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    means = np.zeros(nr_features)
-    stds = np.zeros(nr_features)
-    for f in range(0, nr_features-1):
-        means[f] = np.mean(features[:, f])
-        stds[f] = np.std(features[:, f])
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features, means, stds
-
-
-def second_order_features_and_cubic_for_test(data, means, stds):
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + 2*nr_columns + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    # cubic order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns ** 2 + nr_columns + f] = data[:, f]**3
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    for f in range(0, nr_features-1):
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
-
-
-# Additional funtions to manipulate the data
-def white_cubic_features(data, nr_columns, nr_data):
-    nr_features = 3*nr_columns + 1
-    features = np.zeros([nr_data, nr_features])
-    for f in range(0, nr_columns):
-        features[:, 3*f] = (data[:, f] - np.mean(data[:, f])) / np.std(data[:, f])
-        features[:, 3*f+1] = features[:, 3*f]**2
-        features[:, 3*f+2] = features[:, 3*f]**3
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features
-
-
 def build_poly(x, degree):
     """
     Polynomial basis functions for input data x, for j=0 up to j=degree.
@@ -592,7 +294,8 @@ def split_data(x, y, ratio, seed=1):
     np.random.seed(seed)
     indicies = np.random.permutation(x.shape[0])
     index_number = int(ratio*x.shape[0])
-    return (x[indicies[:index_number], ], x[indicies[index_number:] ,], y[indicies[:index_number], ], y[indicies[index_number:] ,])
+    return (x[indicies[:index_number], ], x[indicies[index_number:], ], y[indicies[:index_number], ],
+            y[indicies[index_number:], ])
 
 
 def standardize(x, mean_x=None, std_x=None):
@@ -602,7 +305,7 @@ def standardize(x, mean_x=None, std_x=None):
     x = x - mean_x
     if std_x is None:
         std_x = np.std(x, axis=0)
-    x[:, std_x>0] = x[:, std_x>0] / std_x[std_x>0]
+    x[:, std_x > 0] = x[:, std_x > 0] / std_x[std_x > 0]
     
     return x, mean_x, std_x
 
@@ -614,9 +317,9 @@ def normalize(x, mean_x=None, std_x=None):
     x = x - mean_x   
     if std_x is None:
         std_x = np.std(x, axis=0)
-    x[:, std_x>0] = x[:, std_x>0] / std_x[std_x>0]
+    x[:, std_x > 0] = x[:, std_x > 0] / std_x[std_x > 0]
     
-    x = x/(np.amax(x, axis = 0) - np.amin(x, axis = 0))  
+    x = x/(np.amax(x, axis=0) - np.amin(x, axis = 0))
     return x, mean_x, std_x       
 
 
@@ -736,12 +439,11 @@ def plot_corr_matrix(corr_matrix, labels):
     fig_cor, axes_cor = plt.subplots(1,1)
     fig_cor.set_size_inches(12, 12)
 
-    myimage = axes_cor.imshow(corr_matrix, cmap='seismic', interpolation='nearest', vmax=1, vmin = -1)
-    axes_cor.set_facecolor('white')
+    myimage = axes_cor.imshow(corr_matrix, cmap='seismic', interpolation='nearest', vmax=1, vmin=-1)
     plt.colorbar(myimage)
 
-    axes_cor.set_xticks(np.arange(0,corr_matrix.shape[0], corr_matrix.shape[0]*1.0/len(labels)))
-    axes_cor.set_yticks(np.arange(0,corr_matrix.shape[1], corr_matrix.shape[1]*1.0/len(labels)))
+    axes_cor.set_xticks(np.arange(0, corr_matrix.shape[0], corr_matrix.shape[0]*1.0/len(labels)))
+    axes_cor.set_yticks(np.arange(0, corr_matrix.shape[1], corr_matrix.shape[1]*1.0/len(labels)))
 
     axes_cor.set_xticklabels(labels)
     axes_cor.set_yticklabels(labels)
@@ -761,7 +463,8 @@ def insert_median_for_nan(data):
     for i in range(data.shape[1]):
         data[data[:, i] == -999, i] = np.nan
         data[np.isnan(data[:, i]), i] = np.nanmedian(data[:, i])
-        
+
+
 def insert_function_for_missing(data, func):
     """Insert value given by the func in place of (-999) values"""
     for i in range(data.shape[1]):
@@ -785,7 +488,7 @@ def ridge_regression(y, tx, lambda_):
     a = xTx + lambda_*(2.0*len(y)) * np.identity(shape[0])
     b = np.dot(tx.T, y)
     weights = np.linalg.solve(a, b)
-    loss = compute_mse(y,tx,weights)
+    loss = compute_mse(y, tx, weights)
     return weights, loss
 
 
@@ -986,7 +689,7 @@ def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, 
     threshold = 1e-8
 
     for n_iter in range(max_iters):              
-        n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
+        n = np.random.random_integers(size=batch_size, low=0, high=y.shape[0] - 1)
         w = w - gamma*compute_stoch_gradient(y[n], tx[n], w, lambda_)
         ws.append(w)
         loss = compute_loss(y, tx, w)
@@ -1024,6 +727,7 @@ def calculate_loss(y, tx, w):
         Loss value. 
     """
     return np.sum(np.log(1 + np.exp(tx.dot(w))) - y * tx.dot(w))
+
 
 def calculate_gradient(y, tx, w, lambda_ = 0):
     """
