@@ -137,6 +137,112 @@ def second_order_features(data):
     return features
 
 
+def build_train_features(data, order=2):
+    defpos_nr = 0
+    defpos_indexes = []
+    for i in range(0, len(data[0])):
+        if np.min(data[:, i]) > -0.0000001:
+            defpos_nr += 1
+            defpos_indexes = defpos_indexes + [i]
+    nr_data, nr_columns = data.shape
+    nr_features = nr_columns**2 + (order-1)*nr_columns + 3*defpos_nr + 1
+    features = np.zeros([nr_data, nr_features])
+
+    # second order terms
+    for f1 in range(0, nr_columns):
+        for f2 in range(0, nr_columns):
+            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
+
+    # first order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns**2 + f] = data[:, f]
+
+    for o in range(3, order + 1):
+        for f in range(0, nr_columns):
+            features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
+
+    # log terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order - 1) * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
+
+    # square root terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
+
+    # cubic root terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
+
+    warnings.filterwarnings('error')
+    # Whitening features
+    means = np.zeros(nr_features)
+    stds = np.zeros(nr_features)
+    for f in range(0, nr_features-1):
+        means[f] = np.mean(features[:, f])
+        stds[f] = np.std(features[:, f])
+        try:
+            features[:, f] = (features[:, f] - means[f]) / stds[f]
+        except Warning:
+            print(f)
+            print(np.mean(features[:, f]))
+            print(np.std(features[:, f]))
+
+    # Add bias
+    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
+    return features, means, stds
+
+
+def build_test_features(data, means, stds, order=2):
+    defpos_nr = 0
+    defpos_indexes = []
+    for i in range(0, len(data[0])):
+        if np.min(data[:, i]) > -0.0000001:
+            defpos_nr += 1
+            defpos_indexes = defpos_indexes + [i]
+    nr_data, nr_columns = data.shape
+    nr_features = nr_columns**2 + (order-1)*nr_columns + 3*defpos_nr + 1
+    features = np.zeros([nr_data, nr_features])
+
+    # second order terms
+    for f1 in range(0, nr_columns):
+        for f2 in range(0, nr_columns):
+            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
+
+    # first order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns**2 + f] = data[:, f]
+
+    for o in range(3, order + 1):
+        for f in range(0, nr_columns):
+            features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
+
+    # log terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order - 1) * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
+
+    # square root terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
+
+    # cubic root terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
+
+    warnings.filterwarnings('error')
+    # Whitening features
+    for f in range(0, nr_features-1):
+        try:
+            features[:, f] = (features[:, f] - means[f]) / stds[f]
+        except Warning:
+            print(f)
+            print(np.mean(features[:, f]))
+            print(np.std(features[:, f]))
+
+    # Add bias
+    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
+    return features
+
+
 def second_order_features_and_4(data):
     defpos_nr = 0
     defpos_indexes = []
@@ -145,7 +251,7 @@ def second_order_features_and_4(data):
             defpos_nr += 1
             defpos_indexes = defpos_indexes + [i]
     nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + 8*nr_columns + 3*defpos_nr + 1
+    nr_features = nr_columns**2 + 12*nr_columns + 3*defpos_nr + 1
     features = np.zeros([nr_data, nr_features])
 
     # second order terms
@@ -185,18 +291,38 @@ def second_order_features_and_4(data):
     for f in range(0, nr_columns):
         features[:, nr_columns ** 2 + 7 * nr_columns + f] = data[:, f] ** 9
 
+    # tenth order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + 8 * nr_columns + f] = data[:, f] ** 10
+
+    # eleventh order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + 9 * nr_columns + f] = data[:, f] ** 11
+
+    # tenth order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + 10 * nr_columns + f] = data[:, f] ** 12
+
+    # eleventh order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + 11 * nr_columns + f] = data[:, f] ** 13
+
+    # eleventh order terms
+    #for f in range(0, nr_columns):
+    #    features[:, nr_columns ** 2 + 12 * nr_columns + f] = np.tanh(data[:, f])
+
 
     # log terms
     for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
+        features[:, nr_columns ** 2 + 12 * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
 
     # square root terms
     for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
+        features[:, nr_columns ** 2 + 12 * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
 
     # cubic root terms
     for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + 8 * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
+        features[:, nr_columns ** 2 + 12 * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
 
     warnings.filterwarnings('error')
     # Whitening features
