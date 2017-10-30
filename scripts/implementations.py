@@ -90,20 +90,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
     return weights[-1], losses[-1]
 
 
-def remove_outliers(data, label, outlier_constant):
-    for column in range(0, len(data[0])):
-        a = np.array(data[:, column])
-        upper_quartile = np.percentile(a, 95)
-        lower_quartile = np.percentile(a, 5)
-        iqr = (upper_quartile - lower_quartile) * outlier_constant
-        quartileset = (lower_quartile - iqr, upper_quartile + iqr)
-        mask = np.ndarray.tolist(np.where(data[:, column] < quartileset[0])[0]) + np.ndarray.tolist(np.where(data[:, column] > quartileset[1])[0])
-        data = np.delete(data, mask, axis=0)
-        label = np.delete(label, mask, axis=0)
-    return data, label
-
-
-def add_mass_binaries(data):
+def add_mass_binary(data):
     nrdata, nrcolumns = data.shape
     newdata = np.zeros((nrdata, nrcolumns+1))
     mask = data[:, 0] == -999
@@ -112,7 +99,7 @@ def add_mass_binaries(data):
     return newdata
 
 
-def split_data_by_jet_num(data, labels):
+def split_data_by_jet_num(data, testing=True, labels=0):
     jet_num_index = 22
     mask0 = [4, 5, 6, 12, 22, 23, 24, 25, 26, 27, 28, 29]
     mask1 = [4, 5, 6, 12, 22, 26, 27, 28]
@@ -132,22 +119,82 @@ def split_data_by_jet_num(data, labels):
     m2 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 2)[0])
     m3 = np.ndarray.tolist(np.where(data[:, jet_num_index] == 3)[0])
     splitdata0 = data[m0, :]
-    labels0 = labels[m0]
     splitdata0 = splitdata0[:, np.ndarray.tolist(np.where(jetmask0)[0])]
     splitdata1 = data[m1, :]
-    labels1 = labels[m1]
     splitdata1 = splitdata1[:, np.ndarray.tolist(np.where(jetmask1)[0])]
     splitdata2 = data[m2, :]
-    labels2 = labels[m2]
     splitdata2 = splitdata2[:, np.ndarray.tolist(np.where(jetmask2)[0])]
     splitdata3 = data[m3, :]
-    labels3 = labels[m3]
     splitdata3 = splitdata3[:, np.ndarray.tolist(np.where(jetmask3)[0])]
 
-    return splitdata0, splitdata1, splitdata2, splitdata3, labels0, labels1, labels2, labels3
+    if not testing:
+        m0 = labels[m0]
+        m1 = labels[m1]
+        m2 = labels[m2]
+        m3 = labels[m3]
+
+    return splitdata0, splitdata1, splitdata2, splitdata3, m0, m1, m2, m3
 
 
-def build_train_features(data, order=2):
+def build_features(data, order=2, testing=False, means=0, stds=0):
+
+    # Getting the indexes of features that are non-negative
+    defpos_nr = 0
+    defpos_indexes = []
+    for i in range(0, len(data[0])):
+        if np.min(data[:, i]) > -0.0000001:
+            defpos_nr += 1
+            defpos_indexes = defpos_indexes + [i]
+
+    # Some variable initializations
+    nr_data, nr_columns = data.shape
+    nr_features = nr_columns**2 + order*nr_columns + 2*defpos_nr + 1
+    features = np.zeros([nr_data, nr_features])
+
+    # second order terms including interaction terms
+    for f1 in range(0, nr_columns):
+        for f2 in range(0, nr_columns):
+            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
+
+    # first order terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns**2 + f] = data[:, f]
+
+    # polynomial terms
+    for o in range(3, order + 1):
+        for f in range(0, nr_columns):
+            features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
+
+    # cubic root terms
+    for f in range(0, nr_columns):
+        features[:, nr_columns ** 2 + (order-1) * nr_columns + f] = np.cbrt(data[:, f])
+
+    # log terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + order * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
+
+    # square root terms
+    for f in range(0, defpos_nr):
+        features[:, nr_columns ** 2 + order * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
+
+    # Making ure the means and standard deviations of the training set are used for whitening
+    if not testing:
+        means = np.zeros(nr_features)
+        stds = np.zeros(nr_features)
+        for f in range(0, nr_features-1):
+            means[f] = np.mean(features[:, f])
+            stds[f] = np.std(features[:, f])
+
+    # Whitening features
+    for f in range(0, nr_features - 1):
+        features[:, f] = (features[:, f] - means[f]) / stds[f]
+
+    # Add bias
+    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
+    return features, means, stds
+
+
+def build_test_features(data, order=2, testing=False, means=0, stds=0):
     defpos_nr = 0
     defpos_indexes = []
     for i in range(0, len(data[0])):
@@ -182,61 +229,6 @@ def build_train_features(data, order=2):
     # square root terms
     for f in range(0, defpos_nr):
         features[:, nr_columns ** 2 + order * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    warnings.filterwarnings('error')
-    # Whitening features
-    means = np.zeros(nr_features)
-    stds = np.zeros(nr_features)
-    for f in range(0, nr_features-1):
-        means[f] = np.mean(features[:, f])
-        stds[f] = np.std(features[:, f])
-        try:
-            features[:, f] = (features[:, f] - means[f]) / stds[f]
-        except Warning:
-            print(f)
-            print(np.mean(features[:, f]))
-            print(np.std(features[:, f]))
-
-    # Add bias
-    features[:, nr_features-1] = np.ones([nr_data, 1])[:, 0]
-    return features, means, stds
-
-
-def build_test_features(data, means, stds, order=2):
-    defpos_nr = 0
-    defpos_indexes = []
-    for i in range(0, len(data[0])):
-        if np.min(data[:, i]) > -0.0000001:
-            defpos_nr += 1
-            defpos_indexes = defpos_indexes + [i]
-    nr_data, nr_columns = data.shape
-    nr_features = nr_columns**2 + (order-1)*nr_columns + 3*defpos_nr + 1
-    features = np.zeros([nr_data, nr_features])
-
-    # second order terms
-    for f1 in range(0, nr_columns):
-        for f2 in range(0, nr_columns):
-            features[:, f1*nr_columns + f2] = np.multiply(data[:, f1], data[:, f2])
-
-    # first order terms
-    for f in range(0, nr_columns):
-        features[:, nr_columns**2 + f] = data[:, f]
-
-    for o in range(3, order + 1):
-        for f in range(0, nr_columns):
-            features[:, nr_columns ** 2 + (o-2)*nr_columns + f] = data[:, f] ** o
-
-    # log terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order - 1) * nr_columns + f] = np.log(data[:, defpos_indexes[f]] + 1)
-
-    # square root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order-1) * nr_columns + defpos_nr + f] = np.sqrt(data[:, defpos_indexes[f]])
-
-    # cubic root terms
-    for f in range(0, defpos_nr):
-        features[:, nr_columns ** 2 + (order-1) * nr_columns + 2*defpos_nr + f] = np.cbrt(data[:, defpos_indexes[f]])
 
     warnings.filterwarnings('error')
     # Whitening features
@@ -451,7 +443,7 @@ def plot_corr_matrix(corr_matrix, labels):
     plt.draw()
 
 
-def insert_mean_for_nan(data):
+def replace_999_by_mean(data):
     """Insert attribute mean in place of (-999) values without counting them to mean"""
     for i in range(data.shape[1]):
         data[data[:, i] == -999, i] = np.nan
