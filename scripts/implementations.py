@@ -56,7 +56,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
         weights : Final weights for the model.
         loss : Final loss value.     
     """
-    weights, losses = gradient_descent(y, tx, initial_w, max_iters, gamma, 0)
+    losses, weights = gradient_descent(y, tx, initial_w, max_iters, gamma, 0)
     return weights[-1], losses[-1]
 
 
@@ -86,7 +86,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
         
         loss : Final loss value.     
     """
-    weights, losses = stochastic_gradient_descent(y, tx, initial_w, 1, max_iters, gamma, 0)
+    losses, weights = stochastic_gradient_descent(y, tx, initial_w, 1, max_iters, gamma, 0)
     return weights[-1], losses[-1]
 
 
@@ -615,15 +615,16 @@ def gradient_descent(y, tx, initial_w, max_iters, gamma, lambda_ = 0):
     ws = [initial_w]
     losses = []
     w = initial_w
-    threshold = 1e-8
+    threshold = 0
     for n_iter in range(max_iters):
         loss = compute_loss(y, tx, w)
         w = w - gamma*compute_gradient(y, tx, w, lambda_)
         ws.append(w)
         losses.append(loss)
-        print("Gradient Descent({bi}/{ti}): loss={l}".format(
+        if(n_iter%1000 == 0):
+            print("Gradient Descent({bi}/{ti}): loss={l}".format(
               bi=n_iter, ti=max_iters - 1, l=loss))
-        if(np.abs(losses[-1] - losses[-2]) < threshold):
+        if(len(losses) > 1 and np.abs(losses[-1] - losses[-2]) < threshold):
             break
     return losses, ws
 
@@ -686,7 +687,7 @@ def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma, 
     ws = [initial_w]
     losses = []
     w = initial_w
-    threshold = 1e-8
+    threshold = 0
 
     for n_iter in range(max_iters):              
         n = np.random.random_integers(size=batch_size, low=0, high=y.shape[0] - 1)
@@ -812,26 +813,17 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     weights = initial_w
     batch_size = 1
-    prev_loss, prev_weights = -10, None
-    debug = True
-    threshold = 1e-8
+    debug = False
     for i in range(max_iters):
         #n = np.random.random_integers(size = batch_size, low = 0, high = y.shape[0] - 1)
         #_, weights = learning_by_gradient_descent(y[n], tx[n], weights, gamma, lambda_)
         #_, weights = learning_by_penalized_gradient(y, tx, weights, gamma, lambda_)
         loss, weights = learning_by_newton_method(y, tx, weights, gamma, lambda_)
         
-        if np.abs(loss - prev_loss) < threshold:
-            weights = prev_weights
-            break
-            
-        if(i%100 == 0 and debug == True):
+        if(i%1000 == 0 and debug == True):
             loss = calculate_loss(y, tx, weights)
             print("Iter({bi}/{ti}): loss={l}, wieghts = {w}, gamma={g}".format(
-              bi=i, ti=max_iters - 1, l=loss, g = gamma, w = weights))
-            
-        prev_loss = loss    
-        prev_weights = weights
+              bi=i, ti=max_iters - 1, l=loss, g = gamma, w = weights))            
         
     loss = calculate_loss(y, tx, weights)
     return weights, loss
