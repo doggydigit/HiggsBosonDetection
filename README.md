@@ -1,4 +1,4 @@
-#EPFL CS-433 Machine Learning project 1
+# EPFL CS-433 Machine Learning project 1
 
 Submission for CS-433 project 1 - prediction of the presence of the Higgs boson.
 Team KozakNurmiTsai, members: Adam Kozak, Tarmo Nurmi, Matthias Tsai.
